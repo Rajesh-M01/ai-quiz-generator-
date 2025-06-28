@@ -1,29 +1,26 @@
 import streamlit as st
-import openai
+from transformers import pipeline
 
-# Use secret key in Streamlit Cloud (don’t expose here!)
-openai.api_key = st.secrets["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"]
+st.title("🧠 AI Quiz Generator – Hugging Face Version (Free)")
+st.markdown("Generate MCQs based on any topic and level using open models.")
 
-st.title("🧠 AI Quiz Generator")
-st.markdown("Generate AI-powered MCQ quizzes. Just enter a topic and difficulty level.")
+# Load model only once
+@st.cache_resource
+def load_model():
+    return pipeline("text-generation", model="mistralai/Mistral-7B-Instruct-v0.1", tokenizer="mistralai/Mistral-7B-Instruct-v0.1")
 
-topic = st.text_input("Enter a topic (e.g., Python, WWII, Algebra)")
-level = st.selectbox("Choose difficulty level", ["Beginner", "Intermediate", "Advanced"])
+generator = load_model()
+
+topic = st.text_input("Enter a topic (e.g., Python, Algebra, WW2)")
+level = st.selectbox("Select difficulty level", ["Beginner", "Intermediate", "Advanced"])
 
 if st.button("Generate Quiz"):
-    with st.spinner("Generating quiz..."):
-        prompt = (
-            f"Generate 3 MCQs on '{topic}' for a {level} level learner. "
-            "Each question should have 4 options and one correct answer."
-        )
+    with st.spinner("Generating questions..."):
+        prompt = f"Generate 3 multiple choice questions on the topic '{topic}' for a {level} level learner. Each question should have 4 options and indicate the correct answer."
 
         try:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "user", "content": prompt}]
-            )
-            quiz = response['choices'][0]['message']['content']
+            result = generator(prompt, max_new_tokens=250, do_sample=True, temperature=0.7)[0]["generated_text"]
             st.markdown("### 📄 Quiz")
-            st.markdown(quiz)
+            st.markdown(result.split(prompt)[-1])
         except Exception as e:
-            st.error("Something went wrong. Check your API key or try again.")
+            st.error(f"Error generating quiz: {e}")
