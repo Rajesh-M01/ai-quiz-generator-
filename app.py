@@ -1,26 +1,26 @@
 import streamlit as st
-from transformers import pipeline
+from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
 
-st.title("🧠 AI Quiz Generator – Hugging Face Version (Free)")
-st.markdown("Generate MCQs based on any topic and level using open models.")
+st.title("🧠 AI Quiz Generator – Free (Hugging Face)")
+st.markdown("Generate MCQs using a free small model via Hugging Face.")
 
-# Load model only once
 @st.cache_resource
 def load_model():
-    return pipeline("text-generation", model="mistralai/Mistral-7B-Instruct-v0.1", tokenizer="mistralai/Mistral-7B-Instruct-v0.1")
+    model = AutoModelForCausalLM.from_pretrained("EleutherAI/gpt-neo-1.3B")
+    tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-1.3B")
+    return pipeline("text-generation", model=model, tokenizer=tokenizer)
 
 generator = load_model()
 
-topic = st.text_input("Enter a topic (e.g., Python, Algebra, WW2)")
-level = st.selectbox("Select difficulty level", ["Beginner", "Intermediate", "Advanced"])
+topic = st.text_input("Enter a topic (e.g., Python, WW2, Algebra)")
+level = st.selectbox("Choose difficulty", ["Beginner", "Intermediate", "Advanced"])
 
 if st.button("Generate Quiz"):
-    with st.spinner("Generating questions..."):
-        prompt = f"Generate 3 multiple choice questions on the topic '{topic}' for a {level} level learner. Each question should have 4 options and indicate the correct answer."
-
+    with st.spinner("Generating..."):
+        prompt = f"Create 3 MCQs with 4 options and correct answers on '{topic}' for {level} students."
         try:
-            result = generator(prompt, max_new_tokens=250, do_sample=True, temperature=0.7)[0]["generated_text"]
+            result = generator(prompt, max_new_tokens=200)[0]['generated_text']
             st.markdown("### 📄 Quiz")
-            st.markdown(result.split(prompt)[-1])
+            st.markdown(result[len(prompt):])  # Clean the prompt from output
         except Exception as e:
-            st.error(f"Error generating quiz: {e}")
+            st.error(f"Error: {e}")
