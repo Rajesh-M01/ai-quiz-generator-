@@ -3,7 +3,8 @@ from transformers import pipeline
 import re
 
 st.set_page_config(page_title="AI Quiz Generator", page_icon="🧠")
-st.title("🧠 AI Quiz Generator (GPT2)")
+st.title("🧠 AI Quiz Generator (GPT2)") 
+st.markdown("📝 **Instructions:** Choose a topic and difficulty. Click 'Generate Quiz' to receive MCQs. Select your answers and click 'Check My Answers' to get instant feedback.")
 st.markdown("Generate MCQs on any topic and difficulty using Hugging Face GPT2.")
 
 # Load GPT2 model once
@@ -20,7 +21,19 @@ difficulty = st.selectbox("Select Difficulty Level", ["Beginner", "Intermediate"
 # Button to trigger quiz generation
 if st.button("Generate Quiz"):
     with st.spinner("Generating quiz... please wait"):
-        prompt = f"Generate 3 MCQs on the topic '{topic}' for {difficulty} level learners. Each question should have 4 options (a, b, c, d) and indicate the correct answer at the end."
+        prompt = (
+            f"Generate 3 multiple choice questions (MCQs) on the topic '{topic}' for {difficulty} level learners. "
+            "Each question must have:\n"
+            "- One question line\n"
+            "- Exactly 4 options: a), b), c), d)\n"
+            "- State the correct option clearly like: Answer: a\n"
+            "Example:\n"
+            "1. What is a database?\n"
+            "a) A website\nb) A place to store data\nc) A server\nd) A protocol\n"
+            "Answer: b\n"
+           "Now generate 3 such MCQs.\n"
+          )
+
         try:
             result = generator(prompt, max_new_tokens=300)[0]["generated_text"]
             output = result.replace(prompt, "").strip()
