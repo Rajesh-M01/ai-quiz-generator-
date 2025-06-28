@@ -2,7 +2,7 @@ import streamlit as st
 import openai
 
 # Use secret key in Streamlit Cloud (don’t expose here!)
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+openai.api_key = st.secrets["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"]
 
 st.title("🧠 AI Quiz Generator")
 st.markdown("Generate AI-powered MCQ quizzes. Just enter a topic and difficulty level.")
