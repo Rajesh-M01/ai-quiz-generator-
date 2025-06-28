@@ -2,12 +2,12 @@ import streamlit as st
 from transformers import pipeline
 import re
 
+# Set page configuration
 st.set_page_config(page_title="AI Quiz Generator", page_icon="🧠")
-st.title("🧠 AI Quiz Generator (GPT2)") 
-st.markdown("📝 **Instructions:** Choose a topic and difficulty. Click 'Generate Quiz' to receive MCQs. Select your answers and click 'Check My Answers' to get instant feedback.")
+st.title("🧠 AI Quiz Generator (GPT2)")
 st.markdown("Generate MCQs on any topic and difficulty using Hugging Face GPT2.")
 
-# Load GPT2 model once
+# Load the GPT2 model once and cache
 @st.cache_resource
 def load_model():
     return pipeline("text-generation", model="gpt2")
@@ -27,43 +27,44 @@ if st.button("Generate Quiz"):
             "- One question line\n"
             "- Exactly 4 options: a), b), c), d)\n"
             "- State the correct option clearly like: Answer: a\n"
+            "Make sure options start with exactly: a), b), c), d) and no repetition or extra answers.\n"
             "Example:\n"
             "1. What is a database?\n"
             "a) A website\nb) A place to store data\nc) A server\nd) A protocol\n"
             "Answer: b\n"
-           "Now generate 3 such MCQs.\n"
-          )
+            "Now generate 3 such MCQs.\n"
+        )
 
         try:
             result = generator(prompt, max_new_tokens=300)[0]["generated_text"]
             output = result.replace(prompt, "").strip()
 
-            # Parse the output to structured format
-            questions = re.split(r'\d+\.', output)[1:]  # Split by question numbers
+            # Parse into questions
+            questions = re.split(r'\d+\.', output)[1:]
             quiz_data = []
 
             for q in questions:
-                parts = re.split(r'[a-d]\)', q)
-                if len(parts) < 5:
-                    continue  # skip malformed
-                question_text = parts[0].strip()
-                options = [f"{chr(97+i)}) {opt.strip()}" for i, opt in enumerate(parts[1:5])]
-                answer_match = re.search(r'Answer: ([a-dA-D])', q)
-                answer_letter = answer_match.group(1).lower() if answer_match else "a"
-                answer = options[ord(answer_letter) - ord('a')]
-                quiz_data.append({
-                    "question": question_text,
-                    "options": options,
-                    "answer": answer
-                })
+                question_text = q.split('a)')[0].strip()
+
+                # Extract 4 options only
+                options_match = re.findall(r'([a-d]\)\s?.*?)(?=\s+[a-d]\)|\s+Answer:|$)', q, re.DOTALL)
+
+                if len(options_match) == 4:
+                    answer_match = re.search(r'Answer:\s*([a-dA-D])', q)
+                    answer_letter = answer_match.group(1).lower() if answer_match else "a"
+                    answer = options_match[ord(answer_letter) - ord('a')]
+                    quiz_data.append({
+                        "question": question_text,
+                        "options": options_match,
+                        "answer": answer.strip()
+                    })
 
             if len(quiz_data) == 0:
-                st.error("Failed to generate properly formatted questions. Try again.")
+                st.error("❌ Failed to generate properly formatted questions. Try again.")
             else:
-                st.success("Quiz Generated Successfully!")
+                st.success("✅ Quiz Generated Successfully!")
                 st.markdown("---")
 
-                # Render quiz and allow user to answer
                 user_answers = []
                 for idx, q in enumerate(quiz_data):
                     st.subheader(f"Q{idx+1}: {q['question']}")
@@ -74,7 +75,7 @@ if st.button("Generate Quiz"):
                 if st.button("Check My Answers"):
                     score = 0
                     for idx, (user_ans, correct_ans) in enumerate(user_answers):
-                        if user_ans == correct_ans:
+                        if user_ans.strip() == correct_ans.strip():
                             st.success(f"✅ Q{idx+1}: Correct!")
                             score += 1
                         else:
@@ -82,4 +83,4 @@ if st.button("Generate Quiz"):
                     st.info(f"🎯 Your Score: {score}/{len(user_answers)}")
 
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error(f"❌ Error generating quiz: {e}")
